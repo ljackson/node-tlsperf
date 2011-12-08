@@ -50,6 +50,7 @@ using v8::Persistent;
 using v8::Value;
 using v8::HandleScope;
 using v8::FunctionTemplate;
+using v8::ObjectTemplate;
 using v8::String;
 using v8::Function;
 using v8::TryCatch;

@@ -31,12 +31,15 @@ private:
     void sslhandshake_cb(ev::io &, int);
     void handshake_completed();
     
-    static Handle<Value> New(const Arguments& args);
+    //static Handle<Value> New(const Arguments& args);
     void Close();
     static Handle<Value> Close(const Arguments& args);
     
-    
+protected:
+    Local<Object> getObjectWrap();
 public:
+    static Persistent<FunctionTemplate> s_ct;
+    
     Connection(int s, struct sockaddr *addr, ev::dynamic_loop &loop, SSL_CTX * ctx);
     ~Connection(void);
     

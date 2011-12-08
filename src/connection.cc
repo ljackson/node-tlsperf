@@ -9,6 +9,8 @@
 #include "connection.h"
 
 using namespace std;
+using namespace node;
+using namespace v8;
 
 namespace tlsperf {
     
@@ -168,23 +170,45 @@ namespace tlsperf {
     void Connection::Initialize(Handle<Object> target)
     {
         HandleScope scope;
-        Local<FunctionTemplate> t = FunctionTemplate::New(New);
-        t->InstanceTemplate()->SetInternalFieldCount(1);
-
-        NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-        target->Set(String::NewSymbol("Connection"), t->GetFunction());
+//        Local<FunctionTemplate> t = FunctionTemplate::New(New);
+        Local<FunctionTemplate> t = FunctionTemplate::New();
         
+        s_ct = Persistent<FunctionTemplate>::New(t);
+        s_ct->InstanceTemplate()->SetInternalFieldCount(1);
+        s_ct->SetClassName(String::NewSymbol("Connection"));
+        
+        NODE_SET_PROTOTYPE_METHOD(s_ct, "close", Close);
+
+        target->Set(String::NewSymbol("Connection"), s_ct->GetFunction());        
     }
+
+//We don't create Connection objects from Javascript, breaks wraping c++ created object    
+//    Handle<Value> Connection::New(const Arguments& args)
+//    {
+//        HandleScope scope;
+//        Handle<Object> external;
+//        assert(args.IsConstructCall());
+//        if(args[0]->IsExternal()) {
+//            //Existing Connection object we are wrapping/aka copy constructor
+//            external = Handle<Object>::Cast(args[0]);
+//        }else{
+//            return ThrowException(Exception::Error(
+//                    String::New("cannot create a connection object directly!")));
+//        }
+//        
+//        args.This()->SetInternalField(0, external);
+//        
+//        return scope.Close(args.This());
+//    }
     
-    Handle<Value> Connection::New(const Arguments& args)
-    {
+    Local<Object> Connection::getObjectWrap()
+    {        
         HandleScope scope;
-        assert(args.IsConstructCall());
-        return v8::ThrowException(v8::Exception::Error(
-                String::New("cannot create a connection object directly!")));
+        Handle<ObjectTemplate> _instance_template = Connection::s_ct->InstanceTemplate();
+        _instance_template->SetInternalFieldCount(1);
+        Local<Object> conn_instance = _instance_template->NewInstance();
         
-        return scope.Close(args.This());
+        return scope.Close(conn_instance);
     }
     
     void Connection::Close()
@@ -212,7 +236,7 @@ namespace tlsperf {
     Handle<Value> Connection::Close(const Arguments& args)
     {
         HandleScope scope;
-        node::ObjectWrap::Unwrap<Connection>(args.This())->Close();
+        ObjectWrap::Unwrap<Connection>(args.This())->Close();
         return Undefined();
     }
     

@@ -224,6 +224,10 @@ namespace tlsperf {
 //        
 //        m_connection_callback->Call(Context::GetCurrent()->Global(), 1, argv);
         
+        Local<Value> argv[1];
+        argv[0] = client->getObjectWrap();
+        m_connection_callback->Call(Context::GetCurrent()->Global(), 1, argv);
+        
     }
     
     void Server::start_listen(int port)
@@ -277,8 +281,7 @@ namespace tlsperf {
 
         NODE_SET_PROTOTYPE_METHOD(s_ct, "listen", Listen);
 
-        target->Set(String::NewSymbol("Server"),
-        s_ct->GetFunction());
+        target->Set(String::NewSymbol("Server"), s_ct->GetFunction());
         
         
         _connection_counter = 0; //starts at zero and never resets for life of process

@@ -9,6 +9,7 @@ using namespace std;
 namespace tlsperf {
     
     Persistent<FunctionTemplate> Server::s_ct;
+    Persistent<FunctionTemplate> Connection::s_ct;
     
     struct listen_baton_t {
         Server *instance;
