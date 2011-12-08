@@ -3,6 +3,7 @@
 
 #include <v8.h>
 #include <node.h>
+#include <node_buffer.h>
 #include "node_defs.h"
 #include <unistd.h>
 #include "ev++.h"
@@ -103,7 +104,7 @@ static _options_t OPTIONS = {
 };
 
 void info_callback(const SSL *ssl, int where, int ret);
-
+extern Persistent<Object> module_handle;
 
 } /* namespace tlsperf */
 

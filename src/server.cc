@@ -215,14 +215,6 @@ namespace tlsperf {
         
         Connection *client = new Connection(client_sd, (struct sockaddr *)&addr, m_loop, m_ssl_ctx);
         assert(client);
-
-//Segfault on callback with new connection wraped object.. I am missing somthing here.
-//        Local<Value> argv[1];
-//        Local<Object> conn;
-//        client->Wrap(conn);
-//        argv[0] = conn;
-//        
-//        m_connection_callback->Call(Context::GetCurrent()->Global(), 1, argv);
         
         Local<Value> argv[1];
         argv[0] = client->getObjectWrap();

@@ -34,6 +34,7 @@ var server = tls.createServer(options, function (conn) {
    cleartextStream.pipe(cleartextStream);
 */
     conn.on("data", function(buf) {
+        console.log("Got Data:'" + buf.toString() + "'");
     });
     conn.on("close", function() {
     });

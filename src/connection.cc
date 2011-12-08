@@ -83,6 +83,22 @@ namespace tlsperf {
         }
         
         LOG("{conn} %lu fd:%d Read data:'%s' from client.\n", m_id, m_sock_fd, buffer);
+        
+        //Event data to nodejs as test
+        HandleScope scope;
+        Local<Value> emit_v = this->handle_->Get(String::NewSymbol("emit"));
+        assert(emit_v->IsFunction());
+        Local<Function> emit_f = emit_v.As<Function>();
+        Handle<Value> argv[2] = {
+            String::New("data"),
+            Buffer::New(String::New(buffer, bytes))
+        };
+        TryCatch tc;
+        emit_f->Call(module_handle, 2, argv);
+        if(tc.HasCaught()) {
+            ERR("{conn} %lu fd:%d exception on data event.", m_id, m_sock_fd);
+            DisplayExceptionLine(tc);
+        }
     }
     
     void Connection::handshake_completed()
@@ -204,11 +220,19 @@ namespace tlsperf {
     Local<Object> Connection::getObjectWrap()
     {        
         HandleScope scope;
-        Handle<ObjectTemplate> _instance_template = Connection::s_ct->InstanceTemplate();
-        _instance_template->SetInternalFieldCount(1);
-        Local<Object> conn_instance = _instance_template->NewInstance();
+        if(handle_.IsEmpty()) {
+            Handle<ObjectTemplate> _instance_template = Connection::s_ct->InstanceTemplate();
+            _instance_template->SetInternalFieldCount(1);
+            Local<Object> conn_instance = _instance_template->NewInstance();
+
+            handle_ = v8::Persistent<v8::Object>::New(conn_instance);
+            handle_->SetPointerInInternalField(0, this);
+            MakeWeak();
+
+            return scope.Close(handle_);
+        }
         
-        return scope.Close(conn_instance);
+        return scope.Close(handle_);
     }
     
     void Connection::Close()
