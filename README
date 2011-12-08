@@ -1,0 +1,22 @@
+the concept here is to provide for a module that implements TLS for nodejs fast, this is mostly just a proof of concept and is nowhere near ready for anything useful be warned!
+
+idea is as seen in test.js
+
+var server = tls.createServer(options, function (conn) {
+    conn.on("data", function(buf) {
+    });
+    conn.on("close", function() {
+    });
+    conn.on("error", function(err) {
+    });
+}).listen(8443);
+
+Currently it runs a hack from hell to not fork or create a thread to manage the dedicated libev c++ loops, i think there is no way to get away from at least a thread to allow the m_loop.run(0) to run as long as the server is running right now the hack is to poll the server loop which is silly.
+
+When trying to wrap the Connection object created in the Server::io_accept to send to the connection callback as show above there is an instant segfault, from what I can find in nodejs the object wraping is always done from a new object in the javascript side, but that just doesn't seem to work for me in this desgin.
+
+
+There are some hold overs from test code based on the stud (git://github.com/bumptech/stud.git) project namely the OPTIONS struct and LOG and ERR macros as I wanted to focus on getting it accepting TLS connections rather than refactoring everything out. It prints out the cert as read by javascript but doesn't use it instead has a hardcoded path for now....etc.
+
+Thanks,
+Leif
