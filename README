@@ -2,7 +2,7 @@ the concept here is to provide for a module that implements TLS for nodejs fast,
 
 idea is as seen in test.js
 
-var server = tls.createServer(options, function (conn) {
+var server = tls.createServer(options, function (conn, conn_id) {
     conn.on("data", function(buf) {
     });
     conn.on("close", function() {

@@ -1,0 +1,4 @@
+* Remove all OPTIONS refrences and use options object passed to Server constructor
+* Remove the libuv hack to poll the libev m_loop in the server object every 1ms :(
+* Implement ringbuffer in c++ see bumptech/stud for a nice c implementation for the write side from node to SSL connection
+
