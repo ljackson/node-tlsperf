@@ -52,6 +52,11 @@ namespace tlsperf {
         else
             assert(OPTIONS.ETYPE == ENC_TLS || OPTIONS.ETYPE == ENC_SSL);
 
+#ifdef SSL_OP_CIPHER_SERVER_PREFERENCE
+        //Force the client to use our ordering for ciphers
+        ssloptions |= SSL_OP_CIPHER_SERVER_PREFERENCE;
+#endif
+                
 #ifdef SSL_OP_NO_COMPRESSION
         ssloptions |= SSL_OP_NO_COMPRESSION;
 #endif
@@ -216,9 +221,7 @@ namespace tlsperf {
         Connection *client = new Connection(client_sd, (struct sockaddr *)&addr, m_loop, m_ssl_ctx);
         assert(client);
         
-        Local<Value> argv[1];
-        argv[0] = client->getObjectWrap();
-        m_connection_callback->Call(Context::GetCurrent()->Global(), 1, argv);
+        client->setConnectedCallback(m_connection_callback); //Set the callback when TLS/SSL is complete
         
     }
     
@@ -303,6 +306,8 @@ namespace tlsperf {
         Server* instance = new Server(Persistent<Function>::New(cb));
 
         instance->Wrap(args.This());
+        instance->Ref();
+        
         return scope.Close(args.This());
     }
 

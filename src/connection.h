@@ -25,6 +25,9 @@ private:
     bool    m_handshaked;
     bool    m_renegotiation;
     
+    Persistent<Function> m_connection_callback; //Callback from server
+    Local<Object> m_instance; //Instance of Javascript object matching this ObjectWrap
+    
     void callback(ev::io &, int);
     void write_cb(ev::io &);
     void read_cb(ev::io &);
@@ -36,7 +39,11 @@ private:
     static Handle<Value> Close(const Arguments& args);
     
 protected:
-    Local<Object> getObjectWrap();
+    Local<Object> getObjectInstance();
+    void setConnectedCallback(v8::Persistent<v8::Function> m_connection_callback);
+    void EmitData(const char *, size_t);
+    void EmitClose();
+    void EmitError(const char *);
 public:
     static Persistent<FunctionTemplate> s_ct;
     

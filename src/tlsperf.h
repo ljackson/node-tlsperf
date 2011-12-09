@@ -95,7 +95,7 @@ static _options_t OPTIONS = {
     NULL,         // FRONT_IP
     "8443",       // FRONT_PORT
     "certs/server.pem",         // CERT_FILE
-    "AES128-SHA",         // CIPHER_SUITE
+    "AES128-SHA:RC4:AES:CAMELLIA128-SHA:!ADH:!aNULL:!DH:!EDH:!eNULL:!LOW:!SSLv2:!EXP:!NULL",         // CIPHER_SUITE
     NULL,         // ENGINE
     3000,          // BACKLOG
     0,            // QUIET

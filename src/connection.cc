@@ -72,34 +72,78 @@ namespace tlsperf {
                     break;
             }
             ERR("{conn} %lu fd:%d dropping connection due to ssl read error.\n", m_id, m_sock_fd);
-            delete this; //Same as handshake must be a better way?
+            EmitError("ssl read error");
+            EmitClose();
+            Unref();
+            //delete this; //not really "this" as it has been thunked into this method by ev++
             return;
         }
         
         if(bytes == 0) {
             LOG("{conn} %lu fd:%d disconnected\n", m_id, m_sock_fd);
-            delete this; //?? still feels icky
+            EmitClose();
+            Unref(); //Let it get GC'ed by v8
+//            delete this; //?? still feels icky
             return;
         }
         
-        LOG("{conn} %lu fd:%d Read data:'%s' from client.\n", m_id, m_sock_fd, buffer);
-        
-        //Event data to nodejs as test
+        //LOG("{conn} %lu fd:%d Read data:'%s' from client.\n", m_id, m_sock_fd, buffer);
+        EmitData(buffer,bytes);
+    }
+    
+    void Connection::EmitData(const char *data, size_t bytes)
+    {
         HandleScope scope;
-        Local<Value> emit_v = this->handle_->Get(String::NewSymbol("emit"));
+        Local<Value> emit_v = m_instance->Get(String::NewSymbol("emit"));
         assert(emit_v->IsFunction());
         Local<Function> emit_f = emit_v.As<Function>();
         Handle<Value> argv[2] = {
             String::New("data"),
-            Buffer::New(String::New(buffer, bytes))
+            Buffer::New(String::New(data, bytes))
         };
         TryCatch tc;
-        emit_f->Call(module_handle, 2, argv);
+        emit_f->Call(m_instance, 2, argv);
         if(tc.HasCaught()) {
             ERR("{conn} %lu fd:%d exception on data event.", m_id, m_sock_fd);
             DisplayExceptionLine(tc);
-        }
+        }        
     }
+    
+    void Connection::EmitClose()
+    {
+        HandleScope scope;
+        Local<Value> emit_v = m_instance->Get(String::NewSymbol("emit"));
+        assert(emit_v->IsFunction());
+        Local<Function> emit_f = emit_v.As<Function>();
+        Handle<Value> argv[1] = {
+            String::New("close")
+        };
+        TryCatch tc;
+        emit_f->Call(m_instance, 1, argv);
+        if(tc.HasCaught()) {
+            ERR("{conn} %lu fd:%d exception on close event.", m_id, m_sock_fd);
+            DisplayExceptionLine(tc);
+        }                
+    }
+    
+    void Connection::EmitError(const char *error)
+    {
+        HandleScope scope;
+        Local<Value> emit_v = m_instance->Get(String::NewSymbol("emit"));
+        assert(emit_v->IsFunction());
+        Local<Function> emit_f = emit_v.As<Function>();
+        Handle<Value> argv[2] = {
+            String::New("error"),
+            Buffer::New(String::New(error))
+        };
+        TryCatch tc;
+        emit_f->Call(m_instance, 2, argv);
+        if(tc.HasCaught()) {
+            ERR("{conn} %lu fd:%d exception on error event.", m_id, m_sock_fd);
+            DisplayExceptionLine(tc);
+        }                
+    }
+    
     
     void Connection::handshake_completed()
     {
@@ -113,6 +157,14 @@ namespace tlsperf {
         }
         
         m_handshaked = true;
+
+        //Call javascript callback to send wraped object as connected.
+        this->getObjectInstance();
+        Local<Value> argv[2] = {
+            m_instance,
+            Number::New(m_id)
+        };
+        m_connection_callback->Call(Context::GetCurrent()->Global(), 2, argv);
         
         m_io.set<Connection, &Connection::callback>(this);
         m_io.start(m_sock_fd, ev::READ | ev::WRITE);        
@@ -139,7 +191,7 @@ namespace tlsperf {
             else
             {
                 LOG("{conn} %lu fd:%d Connection closed/invalid deleting connection.\n", m_id, m_sock_fd);
-                delete this; //Uh.... appears ev++ has an odditty... ? There must be a better way and still be c++
+                delete this; //not really "this" as it has been thunked into this method by ev++
             }
         }
         
@@ -177,7 +229,13 @@ namespace tlsperf {
     
     Connection::~Connection(void) 
     {
+        LOG("{conn} %lu fd:%d deleted.\n", m_id, m_sock_fd);
         Close();
+    }
+    
+    void Connection::setConnectedCallback(Persistent<Function> cb)
+    {
+        m_connection_callback = cb;
     }
     
     /////
@@ -217,22 +275,21 @@ namespace tlsperf {
 //        return scope.Close(args.This());
 //    }
     
-    Local<Object> Connection::getObjectWrap()
+    Local<Object> Connection::getObjectInstance()
     {        
         HandleScope scope;
-        if(handle_.IsEmpty()) {
+        if(m_instance.IsEmpty()) {
             Handle<ObjectTemplate> _instance_template = Connection::s_ct->InstanceTemplate();
             _instance_template->SetInternalFieldCount(1);
             Local<Object> conn_instance = _instance_template->NewInstance();
 
-            handle_ = v8::Persistent<v8::Object>::New(conn_instance);
-            handle_->SetPointerInInternalField(0, this);
-            MakeWeak();
-
-            return scope.Close(handle_);
+            m_instance = scope.Close(conn_instance);
+            
+            Wrap(m_instance);
+            Ref();
         }
         
-        return scope.Close(handle_);
+        return m_instance;
     }
     
     void Connection::Close()
